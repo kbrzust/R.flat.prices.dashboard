@@ -1,0 +1,1134 @@
+---
+title: "Ceny mieszkań w Polsce"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+#Dla systemu Windows
+#install.packages("flexdashboard", repos =  "http://cran.r-project.org")
+#install.packages("readxl", repos =  "http://cran.r-project.org")
+#install.packages("plotly", repos =  "http://cran.r-project.org")
+#install.packages("tidyr", repos =  "http://cran.r-project.org")
+#install.packages("ggplot2", repos =  "http://cran.r-project.org")
+#install.packages("gganimate", repos =  "http://cran.r-project.org")
+#install.packages("rbin", repos =  "http://cran.r-project.org")
+#install.packages("gifski", repos =  "http://cran.r-project.org")
+
+#Dla systemu MacOS
+install.packages("flexdashboard", repos =  "https://mac.R-project.org")
+install.packages("readxl", repos =  "https://mac.R-project.org")
+install.packages("plotly", repos =  "https://mac.R-project.org")
+install.packages("tidyr", repos =  "https://mac.R-project.org")
+install.packages("ggplot2", repos =  "https://mac.R-project.org")
+install.packages("gganimate", repos =  "https://mac.R-project.org")
+install.packages("rbin", repos =  "https://mac.R-project.org")
+install.packages("gifski", repos =  "https://mac.R-project.org")
+
+#Załadowanie bibliotek
+library("tidyr")
+library("flexdashboard")
+library("readxl")
+library("plotly")
+library("ggplot2")
+library("gganimate")
+library("rbin")
+library("gifski")
+
+
+po<- read_excel("~/Desktop/Kamilka/dane.xls", sheet= "Rynek pierwotny ceny oferowane",col_names = TRUE, na = "")
+
+pt <- read_excel("~/Desktop/Kamilka/dane.xls", sheet= "Rynek pierwotny ceny transakcyj",col_names = TRUE, na = "")
+
+wo <- read_excel("~/Desktop/Kamilka/dane.xls", sheet= "Rynek wtorny ceny oferowane",col_names = TRUE, na = "")
+
+wt <- read_excel("~/Desktop/Kamilka/dane.xls", sheet= "Rynek wtorny ceny transakcyjne",col_names = TRUE, na = "")
+
+przecietne_wynagrodzenie <- read_excel("~/Desktop/Kamilka/dane.xls", sheet= "Srednie wynagrodzenie brutto",col_names = TRUE, na = "")
+
+przecietne_wynagrodzenie_2021 <- filter(przecietne_wynagrodzenie, Lata == 2021)
+
+```
+
+
+Rynek pierwotny {}
+===================================== 
+
+
+Column {data-height=650}
+-----------------------------------------------------------------------
+### Ceny oferowane vs ceny transferowe w 2021 roku 
+
+```{r}
+data_long_po <- gather(po, Miasto, cena, Białystok:ZielonaGóra, factor_key=TRUE)
+cenyoferowane_po<- data_long_po %>% filter(Rok == 2021)
+
+data_long_pt <- gather(pt, Miasto, cena, Białystok:ZielonaGóra, factor_key=TRUE)
+cenyoferowane_pt<- data_long_pt %>% filter(Rok == 2021)
+
+covsct <- plot_ly(data = cenyoferowane_po, x = ~Miasto, y = ~cena, type = 'bar', name = 'Ceny oferowane', marker = list(color = 'rgb(49,130,189)'))
+covsct <- covsct %>% add_trace(data = cenyoferowane_pt, x = ~Miasto,y = ~cena, name = 'Ceny transakcyjne', marker = list(color = 'rgb(204,204,204)'))
+covsct <- covsct %>% layout(xaxis = list(title = "", tickangle = -45))
+covsct
+
+```
+
+
+
+### Stosunek miesięcznego dochodu do ceny 1 m2 nieruchomości w Gdańsku
+
+```{r}
+przec_doch_m2 <- plot_ly(
+  data = pt,
+  x = ~Rok,
+  y = ~Gdańsk,
+  name = "Cena transakcyjna za m2",
+  type = "scatter",
+  line = list(color = 'rgb(22, 96, 167)')
+)%>% 
+add_trace(data= po,  x = ~Rok, y = ~Gdańsk, name = "Cena oferowana za m2",line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash'))%>% 
+add_trace(data = przecietne_wynagrodzenie, x= ~Lata, y = ~przeciętnieMiesieczne, name = "Przeciętne wynagrodzenie brutto")
+
+przec_doch_m2
+```
+
+
+
+## Results {.tabset}
+
+
+### Białystok 
+
+```{r}
+
+bi_po2020 <- filter(data_long_po, Miasto == "Białystok", Rok == 2020)
+bi_pt2020 <- filter(data_long_pt, Miasto == "Białystok", Rok == 2020)
+bi_po2021 <- filter(data_long_po, Miasto == "Białystok", Rok == 2021)
+bi_pt2021 <- filter(data_long_pt, Miasto == "Białystok", Rok == 2021)
+
+bialystok_2020p <- rbind(bi_po2020,bi_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+bialystok_2020p$Rodzaj <- Rodzaj
+
+
+data_bialystokp <- rbind(bi_po2020,bi_pt2020,bi_po2021,bi_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_bialystokp$Rodzaj <- Rodzaj
+
+ 
+pppp <- ggplot(data = bialystok_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+zzpp <- ggplot(data = data_bialystokp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "blue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Wzrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(zzpp, renderer = gifski_renderer())
+
+```
+
+
+### Bydgoszcz
+
+```{r}
+by_po2020 <- filter(data_long_po, Miasto == "Bydgoszcz", Rok == 2020)
+by_pt2020 <- filter(data_long_pt, Miasto == "Bydgoszcz", Rok == 2020)
+by_po2021 <- filter(data_long_po, Miasto == "Bydgoszcz", Rok == 2021)
+by_pt2021 <- filter(data_long_pt, Miasto == "Bydgoszcz", Rok == 2021)
+
+Bydgoszcz_2020p <- rbind(by_po2020,by_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Bydgoszcz_2020p$Rodzaj <- Rodzaj
+
+
+data_Bydgoszczp <- rbind(by_po2020,by_pt2020,by_po2021,by_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Bydgoszczp$Rodzaj <- Rodzaj
+
+ 
+qpp <- ggplot(data = Bydgoszcz_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+wpp <- ggplot(data = data_Bydgoszczp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(wpp, renderer = gifski_renderer())
+
+```
+
+
+### Gdańsk 
+
+```{r}
+gda_po2020 <- filter(data_long_po, Miasto == "Gdańsk", Rok == 2020)
+gda_pt2020 <- filter(data_long_pt, Miasto == "Gdańsk", Rok == 2020)
+gda_po2021 <- filter(data_long_po, Miasto == "Gdańsk", Rok == 2021)
+gda_pt2021 <- filter(data_long_pt, Miasto == "Gdańsk", Rok == 2021)
+
+Gdansk_2020p <- rbind(gda_po2020,gda_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Gdansk_2020p$Rodzaj <- Rodzaj
+
+
+data_Gdanskp <- rbind(gda_po2020,gda_pt2020,gda_po2021,gda_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Gdanskp$Rodzaj <- Rodzaj
+
+ 
+epp <- ggplot(data = Gdansk_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+rpp <- ggplot(data = data_Gdanskp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "black") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(rpp, renderer = gifski_renderer())
+
+```
+
+
+### Katowice
+
+```{r}
+kat_po2020 <- filter(data_long_po, Miasto == "Katowice", Rok == 2020)
+kat_pt2020 <- filter(data_long_pt, Miasto == "Katowice", Rok == 2020)
+kat_po2021 <- filter(data_long_po, Miasto == "Katowice", Rok == 2021)
+kat_pt2021 <- filter(data_long_pt, Miasto == "Katowice", Rok == 2021)
+
+Katowice_2020p <- rbind(kat_po2020,kat_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Katowice_2020p$Rodzaj <- Rodzaj
+
+
+data_Katowicep <- rbind(kat_po2020,kat_pt2020,kat_po2021,kat_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Katowicep$Rodzaj <- Rodzaj
+
+ 
+tpp <- ggplot(data = Katowice_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+ypp <- ggplot(data = data_Katowicep, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "tomato") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(ypp, renderer = gifski_renderer())
+
+```
+
+
+### Kielce
+
+```{r}
+ki_po2020 <- filter(data_long_po, Miasto == "Kielce", Rok == 2020)
+ki_pt2020 <- filter(data_long_pt, Miasto == "Kielce", Rok == 2020)
+ki_po2021 <- filter(data_long_po, Miasto == "Kielce", Rok == 2021)
+ki_pt2021 <- filter(data_long_pt, Miasto == "Kielce", Rok == 2021)
+
+Kielce_2020p <- rbind(ki_po2020,ki_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Kielce_2020p$Rodzaj <- Rodzaj
+
+
+data_Kielcep <- rbind(ki_po2020,ki_pt2020,ki_po2021,ki_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Kielcep$Rodzaj <- Rodzaj
+
+ 
+ww <- ggplot(data = Kielce_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+jjpp <- ggplot(data = data_Kielcep, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "darkblue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(jjpp, renderer = gifski_renderer())
+```
+
+### Kraków
+
+```{r}
+kr_po2020 <- filter(data_long_po, Miasto == "Kraków", Rok == 2020)
+kr_pt2020 <- filter(data_long_pt, Miasto == "Kraków", Rok == 2020)
+kr_po2021 <- filter(data_long_po, Miasto == "Kraków", Rok == 2021)
+kr_pt2021 <- filter(data_long_pt, Miasto == "Kraków", Rok == 2021)
+
+Krakow_2020p <- rbind(kr_po2020,kr_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Krakow_2020p$Rodzaj <- Rodzaj
+
+
+data_Krakowp <- rbind(kr_po2020,kr_pt2020,kr_po2021,kr_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Krakowp$Rodzaj <- Rodzaj
+
+ 
+kkpp <- ggplot(data = Krakow_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+bbpp <- ggplot(data = data_Krakowp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(bbpp, renderer = gifski_renderer())
+```
+
+### Lublin
+
+```{r}
+lub_po2020 <- filter(data_long_po, Miasto == "Lublin", Rok == 2020)
+lub_pt2020 <- filter(data_long_pt, Miasto == "Lublin", Rok == 2020)
+lub_po2021 <- filter(data_long_po, Miasto == "Lublin", Rok == 2021)
+lub_pt2021 <- filter(data_long_pt, Miasto == "Lublin", Rok == 2021)
+
+Lublin_2020p <- rbind(lub_po2020,lub_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Lublin_2020p$Rodzaj <- Rodzaj
+
+
+data_Lublinp <- rbind(lub_po2020,lub_pt2020,lub_po2021,lub_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Lublinp$Rodzaj <- Rodzaj
+
+ 
+npp <- ggplot(data = Lublin_2020p , aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+mpp <- ggplot(data = data_Lublinp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(mpp, renderer = gifski_renderer())
+```
+
+### Łódź
+
+```{r}
+lo_wo2020 <- filter(data_long_po, Miasto == "Łódź", Rok == 2020)
+lo_wt2020 <- filter(data_long_pt, Miasto == "Łódź", Rok == 2020)
+lo_wo2021 <- filter(data_long_po, Miasto == "Łódź", Rok == 2021)
+lo_wt2021 <- filter(data_long_pt, Miasto == "Łódź", Rok == 2021)
+
+Lodz_2020p <- rbind(lo_wo2020,lo_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Lodz_2020p$Rodzaj <- Rodzaj
+
+
+data_Lodzp <- rbind(lo_wo2020,lo_wt2020,lo_wo2021,lo_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Lodzp$Rodzaj <- Rodzaj
+
+ 
+lpp <- ggplot(data = Lodz_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+zpp <- ggplot(data = data_Lodzp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "blue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(zpp, renderer = gifski_renderer())
+```
+
+### Olsztyn
+
+```{r}
+ol_po2020 <- filter(data_long_po, Miasto == "Olsztyn", Rok == 2020)
+ol_pt2020 <- filter(data_long_pt, Miasto == "Olsztyn", Rok == 2020)
+ol_po2021 <- filter(data_long_po, Miasto == "Olsztyn", Rok == 2021)
+ol_pt2021 <- filter(data_long_pt, Miasto == "Olsztyn", Rok == 2021)
+
+Olsztyn_2020p <- rbind(ol_po2020,ol_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Olsztyn_2020p$Rodzaj <- Rodzaj
+
+
+data_Olsztynp <- rbind(ol_po2020,ol_pt2020,ol_po2021,ol_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Olsztynp$Rodzaj <- Rodzaj
+
+ 
+vpp <- ggplot(data = Olsztyn_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+bpp <- ggplot(data = data_Olsztynp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "orange") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(bpp, renderer = gifski_renderer())
+```
+
+### Opole
+
+```{r}
+op_po2020 <- filter(data_long_po, Miasto == "Opole", Rok == 2020)
+op_pt2020 <- filter(data_long_pt, Miasto == "Opole", Rok == 2020)
+op_po2021 <- filter(data_long_po, Miasto == "Opole", Rok == 2021)
+op_pt2021 <- filter(data_long_pt, Miasto == "Opole", Rok == 2021)
+
+Opole_2020p <- rbind(op_po2020,op_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Opole_2020p$Rodzaj <- Rodzaj
+
+
+data_Opolep <- rbind(op_po2020,op_pt2020,op_po2021,op_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Opolep$Rodzaj <- Rodzaj
+
+ 
+xpp <- ggplot(data = Opole_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+cpp <- ggplot(data = data_Opolep, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(cpp, renderer = gifski_renderer())
+```
+
+### Poznań
+
+```{r}
+poz_po2020 <- filter(data_long_po, Miasto == "Poznań", Rok == 2020)
+poz_pt2020 <- filter(data_long_pt, Miasto == "Poznań", Rok == 2020)
+poz_po2021 <- filter(data_long_po, Miasto == "Poznań", Rok == 2021)
+poz_pt2021 <- filter(data_long_pt, Miasto == "Poznań", Rok == 2021)
+
+Poznan_2020p <- rbind(poz_po2020,poz_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Poznan_2020p$Rodzaj <- Rodzaj
+
+
+data_Poznanp <- rbind(poz_po2020,poz_pt2020,poz_po2021,poz_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Poznanp$Rodzaj <- Rodzaj
+
+ 
+jpp <- ggplot(data = Poznan_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+kpp <- ggplot(data = data_Poznanp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "yellow") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(kpp, renderer = gifski_renderer())
+```
+
+### Rzeszów
+
+```{r}
+rz_po2020 <- filter(data_long_po, Miasto == "Rzeszów", Rok == 2020)
+rz_pt2020 <- filter(data_long_pt, Miasto == "Rzeszów", Rok == 2020)
+rz_po2021 <- filter(data_long_po, Miasto == "Rzeszów", Rok == 2021)
+rz_pt2021 <- filter(data_long_pt, Miasto == "Rzeszów", Rok == 2021)
+
+Rzeszow_2020p <- rbind(rz_po2020,rz_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Rzeszow_2020p$Rodzaj <- Rodzaj
+
+
+data_Rzeszowp <- rbind(rz_po2020,rz_pt2020,rz_po2021,rz_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Rzeszowp$Rodzaj <- Rodzaj
+
+ 
+gpp <- ggplot(data = Rzeszow_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+hpp <- ggplot(data = data_Rzeszowp , aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "black") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(hpp, renderer = gifski_renderer())
+```
+
+### Szczecin
+
+```{r}
+sz_po2020 <- filter(data_long_po, Miasto == "Szczecin", Rok == 2020)
+sz_pt2020 <- filter(data_long_pt, Miasto == "Szczecin", Rok == 2020)
+sz_po2021 <- filter(data_long_po, Miasto == "Szczecin", Rok == 2021)
+sz_pt2021 <- filter(data_long_pt, Miasto == "Szczecin", Rok == 2021)
+
+Szczecin_2020p <- rbind(sz_po2020,sz_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Szczecin_2020p$Rodzaj <- Rodzaj
+
+
+data_Szczecinp <- rbind(sz_po2020,sz_pt2020,sz_po2021,sz_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Szczecinp$Rodzaj <- Rodzaj
+
+ 
+dpp <- ggplot(data = Szczecin_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+fpp <- ggplot(data = data_Szczecinp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(fpp, renderer = gifski_renderer())
+```
+
+
+### Warszawa
+
+```{r}
+waw_po2020 <- filter(data_long_po, Miasto == "Warszawa", Rok == 2020)
+waw_pt2020 <- filter(data_long_pt, Miasto == "Warszawa", Rok == 2020)
+waw_po2021 <- filter(data_long_po, Miasto == "Warszawa", Rok == 2021)
+waw_pt2021 <- filter(data_long_pt, Miasto == "Warszawa", Rok == 2021)
+
+Warszawa_2020p <- rbind(waw_po2020,waw_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Warszawa_2020p$Rodzaj <- Rodzaj
+
+
+data_Warszawap <- rbind(waw_po2020,waw_pt2020,waw_po2021,waw_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Warszawap$Rodzaj <- Rodzaj
+
+ 
+app <- ggplot(data = Warszawa_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+spp <- ggplot(data = data_Warszawap, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "yellow") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(spp, renderer = gifski_renderer())
+```
+
+### Wrocław
+
+```{r}
+wr_po2020 <- filter(data_long_po, Miasto == "Wrocław", Rok == 2020)
+wr_pt2020 <- filter(data_long_pt, Miasto == "Wrocław", Rok == 2020)
+wr_po2021 <- filter(data_long_po, Miasto == "Wrocław", Rok == 2021)
+wr_pt2021 <- filter(data_long_pt, Miasto == "Wrocław", Rok == 2021)
+
+Wroclaw_2020p <- rbind(wr_po2020,wr_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Wroclaw_2020p$pRodzaj <- Rodzaj
+
+
+data_Wroclawp <- rbind(wr_po2020,wr_pt2020,wr_po2021,wr_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Wroclawp$Rodzaj <- Rodzaj
+
+ 
+opp<- ggplot(data = Wroclaw_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+ppp<- ggplot(data = data_Wroclawp, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(ppp, renderer = gifski_renderer())
+```
+
+
+### Zielona Góra
+
+```{r}
+zg_po2020 <- filter(data_long_po, Miasto == "ZielonaGóra", Rok == 2020)
+zg_pt2020 <- filter(data_long_pt, Miasto == "ZielonaGóra", Rok == 2020)
+zg_po2021 <- filter(data_long_po, Miasto == "ZielonaGóra", Rok == 2021)
+zg_pt2021 <- filter(data_long_pt, Miasto == "ZielonaGóra", Rok == 2021)
+
+ZielonaGora_2020p <- rbind(zg_po2020,zg_pt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+ZielonaGora_2020p$Rodzaj <- Rodzaj
+
+
+data_ZielonaGorap <- rbind(zg_po2020,zg_pt2020,zg_po2021,zg_pt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_ZielonaGorap$Rodzaj <- Rodzaj
+
+ 
+upp <- ggplot(data = ZielonaGora_2020p, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+ipp <- ggplot(data = data_ZielonaGorap, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(ipp, renderer = gifski_renderer())
+```
+
+
+Rynek wtórny {}
+===================================== 
+
+Column {data-height=650}
+-----------------------------------------------------------------------
+### Ceny oferowane vs ceny transferowe w 2021 roku 
+
+```{r}
+data_long_wo <- gather(wo, Miasto, cena, Białystok:ZielonaGóra, factor_key=TRUE)
+cenyoferowane_wo<- data_long_wo %>% filter(Rok == 2021)
+
+data_long_wt <- gather(wt, Miasto, cena, Białystok:ZielonaGóra, factor_key=TRUE)
+cenyoferowane_wt<- data_long_wt %>% filter(Rok == 2021)
+
+covsct <- plot_ly(data = cenyoferowane_wo, x = ~Miasto, y = ~cena, type = 'bar', name = 'Ceny oferowane', marker = list(color = 'rgb(49,130,189)'))
+covsct <- covsct %>% add_trace(data = cenyoferowane_wt, x = ~Miasto,y = ~cena, name = 'Ceny transakcyjne', marker = list(color = 'rgb(204,204,204)'))
+covsct <- covsct %>% layout(xaxis = list(title = "", tickangle = -45))
+covsct
+```
+
+
+
+
+
+### Stosunek miesięcznego dochodu do ceny 1 m2 nieruchomości w Gdańsku
+```{r}
+przec_doch_m2 <- plot_ly(
+  data = wt,
+  x = ~Rok,
+  y = ~Gdańsk,
+  name = "Cena transakcyjna za m2",
+  type = "scatter",
+  line = list(color = 'rgb(22, 96, 167)')
+)%>% 
+add_trace(data= wo,  x = ~Rok, y = ~Gdańsk, name = "Cena oferowana za m2",line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash'))%>% 
+add_trace(data = przecietne_wynagrodzenie, x= ~Lata, y = ~przeciętnieMiesieczne, name = "Przeciętne wynagrodzenie brutto")
+
+przec_doch_m2
+
+```
+
+
+## Results {.tabset}
+
+
+### Białystok 
+
+```{r}
+
+bi_wo2020 <- filter(data_long_wo, Miasto == "Białystok", Rok == 2020)
+bi_wt2020 <- filter(data_long_wt, Miasto == "Białystok", Rok == 2020)
+bi_wo2021 <- filter(data_long_wo, Miasto == "Białystok", Rok == 2021)
+bi_wt2021 <- filter(data_long_wt, Miasto == "Białystok", Rok == 2021)
+
+bialystok_2020 <- rbind(bi_wo2020,bi_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+bialystok_2020$Rodzaj <- Rodzaj
+
+
+data_bialystok <- rbind(bi_wo2020,bi_wt2020,bi_wo2021,bi_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_bialystok$Rodzaj <- Rodzaj
+
+ 
+pp <- ggplot(data = bialystok_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+zz <- ggplot(data = data_bialystok, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "blue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Wzrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(zz, renderer = gifski_renderer())
+
+```
+
+
+### Bydgoszcz
+
+```{r}
+by_wo2020 <- filter(data_long_wo, Miasto == "Bydgoszcz", Rok == 2020)
+by_wt2020 <- filter(data_long_wt, Miasto == "Bydgoszcz", Rok == 2020)
+by_wo2021 <- filter(data_long_wo, Miasto == "Bydgoszcz", Rok == 2021)
+by_wt2021 <- filter(data_long_wt, Miasto == "Bydgoszcz", Rok == 2021)
+
+Bydgoszcz_2020 <- rbind(by_wo2020,by_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Bydgoszcz_2020$Rodzaj <- Rodzaj
+
+
+data_Bydgoszcz <- rbind(by_wo2020,by_wt2020,by_wo2021,by_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Bydgoszcz$Rodzaj <- Rodzaj
+
+ 
+q <- ggplot(data = Bydgoszcz_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+w <- ggplot(data = data_Bydgoszcz, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(w, renderer = gifski_renderer())
+
+```
+
+
+### Gdańsk 
+
+```{r}
+gda_wo2020 <- filter(data_long_wo, Miasto == "Gdańsk", Rok == 2020)
+gda_wt2020 <- filter(data_long_wt, Miasto == "Gdańsk", Rok == 2020)
+gda_wo2021 <- filter(data_long_wo, Miasto == "Gdańsk", Rok == 2021)
+gda_wt2021 <- filter(data_long_wt, Miasto == "Gdańsk", Rok == 2021)
+
+Gdansk_2020 <- rbind(gda_wo2020,gda_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Gdansk_2020$Rodzaj <- Rodzaj
+
+
+data_Gdansk <- rbind(gda_wo2020,gda_wt2020,gda_wo2021,gda_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Gdansk$Rodzaj <- Rodzaj
+
+ 
+e <- ggplot(data = Gdansk_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+r <- ggplot(data = data_Gdansk, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(r, renderer = gifski_renderer())
+
+```
+
+
+### Katowice
+
+```{r}
+kat_wo2020 <- filter(data_long_wo, Miasto == "Katowice", Rok == 2020)
+kat_wt2020 <- filter(data_long_wt, Miasto == "Katowice", Rok == 2020)
+kat_wo2021 <- filter(data_long_wo, Miasto == "Katowice", Rok == 2021)
+kat_wt2021 <- filter(data_long_wt, Miasto == "Katowice", Rok == 2021)
+
+Katowice_2020 <- rbind(kat_wo2020,kat_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Katowice_2020$Rodzaj <- Rodzaj
+
+
+data_Katowice <- rbind(kat_wo2020,kat_wt2020,kat_wo2021,kat_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Katowice$Rodzaj <- Rodzaj
+
+ 
+t <- ggplot(data = Katowice_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+y <- ggplot(data = data_Katowice, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "orange") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(y, renderer = gifski_renderer())
+
+```
+
+
+### Kielce
+
+```{r}
+ki_wo2020 <- filter(data_long_wo, Miasto == "Kielce", Rok == 2020)
+ki_wt2020 <- filter(data_long_wt, Miasto == "Kielce", Rok == 2020)
+ki_wo2021 <- filter(data_long_wo, Miasto == "Kielce", Rok == 2021)
+ki_wt2021 <- filter(data_long_wt, Miasto == "Kielce", Rok == 2021)
+
+Kielce_2020 <- rbind(ki_wo2020,ki_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Kielce_2020$Rodzaj <- Rodzaj
+
+
+data_Kielce <- rbind(ki_wo2020,ki_wt2020,ki_wo2021,ki_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Kielce$Rodzaj <- Rodzaj
+
+ 
+ww <- ggplot(data = Kielce_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+jj <- ggplot(data = data_Kielce, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "white") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(jj, renderer = gifski_renderer())
+```
+
+### Kraków
+
+```{r}
+kr_wo2020 <- filter(data_long_wo, Miasto == "Kraków", Rok == 2020)
+kr_wt2020 <- filter(data_long_wt, Miasto == "Kraków", Rok == 2020)
+kr_wo2021 <- filter(data_long_wo, Miasto == "Kraków", Rok == 2021)
+kr_wt2021 <- filter(data_long_wt, Miasto == "Kraków", Rok == 2021)
+
+Krakow_2020 <- rbind(kr_wo2020,kr_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Krakow_2020$Rodzaj <- Rodzaj
+
+
+data_Krakow <- rbind(kr_wo2020,kr_wt2020,kr_wo2021,kr_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Krakow$Rodzaj <- Rodzaj
+
+ 
+kk <- ggplot(data = Krakow_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+bb <- ggplot(data = data_Krakow, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "yellow") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(bb, renderer = gifski_renderer())
+```
+
+### Lublin
+
+```{r}
+lub_wo2020 <- filter(data_long_wo, Miasto == "Lublin", Rok == 2020)
+lub_wt2020 <- filter(data_long_wt, Miasto == "Lublin", Rok == 2020)
+lub_wo2021 <- filter(data_long_wo, Miasto == "Lublin", Rok == 2021)
+lub_wt2021 <- filter(data_long_wt, Miasto == "Lublin", Rok == 2021)
+
+Lublin_2020 <- rbind(lub_wo2020,lub_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Lublin_2020$Rodzaj <- Rodzaj
+
+
+data_Lublin <- rbind(lub_wo2020,lub_wt2020,lub_wo2021,lub_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Lublin$Rodzaj <- Rodzaj
+
+ 
+n <- ggplot(data = Lublin_2020 , aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+m <- ggplot(data = data_Lublin, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(m, renderer = gifski_renderer())
+```
+
+### Łódź
+
+```{r}
+lo_wo2020 <- filter(data_long_wo, Miasto == "Łódź", Rok == 2020)
+lo_wt2020 <- filter(data_long_wt, Miasto == "Łódź", Rok == 2020)
+lo_wo2021 <- filter(data_long_wo, Miasto == "Łódź", Rok == 2021)
+lo_wt2021 <- filter(data_long_wt, Miasto == "Łódź", Rok == 2021)
+
+Lodz_2020 <- rbind(lo_wo2020,lo_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Lodz_2020$Rodzaj <- Rodzaj
+
+
+data_Lodz <- rbind(lo_wo2020,lo_wt2020,lo_wo2021,lo_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Lodz$Rodzaj <- Rodzaj
+
+ 
+l <- ggplot(data = Lodz_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+z <- ggplot(data = data_Lodz, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "blue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(z, renderer = gifski_renderer())
+```
+
+### Olsztyn
+
+```{r}
+ol_wo2020 <- filter(data_long_wo, Miasto == "Olsztyn", Rok == 2020)
+ol_wt2020 <- filter(data_long_wt, Miasto == "Olsztyn", Rok == 2020)
+ol_wo2021 <- filter(data_long_wo, Miasto == "Olsztyn", Rok == 2021)
+ol_wt2021 <- filter(data_long_wt, Miasto == "Olsztyn", Rok == 2021)
+
+Olsztyn_2020 <- rbind(ol_wo2020,ol_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Olsztyn_2020$Rodzaj <- Rodzaj
+
+
+data_Olsztyn <- rbind(ol_wo2020,ol_wt2020,ol_wo2021,ol_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Olsztyn$Rodzaj <- Rodzaj
+
+ 
+v <- ggplot(data = Olsztyn_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+b <- ggplot(data = data_Olsztyn, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "orange") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(b, renderer = gifski_renderer())
+```
+
+### Opole
+
+```{r}
+op_wo2020 <- filter(data_long_wo, Miasto == "Opole", Rok == 2020)
+op_wt2020 <- filter(data_long_wt, Miasto == "Opole", Rok == 2020)
+op_wo2021 <- filter(data_long_wo, Miasto == "Opole", Rok == 2021)
+op_wt2021 <- filter(data_long_wt, Miasto == "Opole", Rok == 2021)
+
+Opole_2020 <- rbind(op_wo2020,op_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Opole_2020$Rodzaj <- Rodzaj
+
+
+data_Opole <- rbind(op_wo2020,op_wt2020,op_wo2021,op_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Opole$Rodzaj <- Rodzaj
+
+ 
+x <- ggplot(data = Opole_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+c <- ggplot(data = data_Opole, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "red") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(c, renderer = gifski_renderer())
+```
+
+### Poznań
+
+```{r}
+poz_wo2020 <- filter(data_long_wo, Miasto == "Poznań", Rok == 2020)
+poz_wt2020 <- filter(data_long_wt, Miasto == "Poznań", Rok == 2020)
+poz_wo2021 <- filter(data_long_wo, Miasto == "Poznań", Rok == 2021)
+poz_wt2021 <- filter(data_long_wt, Miasto == "Poznań", Rok == 2021)
+
+Poznan_2020 <- rbind(poz_wo2020,poz_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Poznan_2020$Rodzaj <- Rodzaj
+
+
+data_Poznan <- rbind(poz_wo2020,poz_wt2020,poz_wo2021,poz_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Poznan$Rodzaj <- Rodzaj
+
+ 
+j <- ggplot(data = Poznan_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+k <- ggplot(data = data_Poznan, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "blue") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(k, renderer = gifski_renderer())
+```
+
+### Rzeszów
+
+```{r}
+rz_wo2020 <- filter(data_long_wo, Miasto == "Rzeszów", Rok == 2020)
+rz_wt2020 <- filter(data_long_wt, Miasto == "Rzeszów", Rok == 2020)
+rz_wo2021 <- filter(data_long_wo, Miasto == "Rzeszów", Rok == 2021)
+rz_wt2021 <- filter(data_long_wt, Miasto == "Rzeszów", Rok == 2021)
+
+Rzeszow_2020 <- rbind(rz_wo2020,rz_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Rzeszow_2020$Rodzaj <- Rodzaj
+
+
+data_Rzeszow <- rbind(rz_wo2020,rz_wt2020,rz_wo2021,rz_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Rzeszow$Rodzaj <- Rodzaj
+
+ 
+g <- ggplot(data = Rzeszow_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+h <- ggplot(data = data_Rzeszow , aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "orange") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(h, renderer = gifski_renderer())
+```
+
+### Szczecin
+
+```{r}
+sz_wo2020 <- filter(data_long_wo, Miasto == "Szczecin", Rok == 2020)
+sz_wt2020 <- filter(data_long_wt, Miasto == "Szczecin", Rok == 2020)
+sz_wo2021 <- filter(data_long_wo, Miasto == "Szczecin", Rok == 2021)
+sz_wt2021 <- filter(data_long_wt, Miasto == "Szczecin", Rok == 2021)
+
+Szczecin_2020 <- rbind(sz_wo2020,sz_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Szczecin_2020$Rodzaj <- Rodzaj
+
+
+data_Szczecin <- rbind(sz_wo2020,sz_wt2020,sz_wo2021,sz_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Szczecin$Rodzaj <- Rodzaj
+
+ 
+d <- ggplot(data = Szczecin_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+f <- ggplot(data = data_Szczecin, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "yellow") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(f, renderer = gifski_renderer())
+```
+
+
+### Warszawa
+
+```{r}
+waw_wo2020 <- filter(data_long_wo, Miasto == "Warszawa", Rok == 2020)
+waw_wt2020 <- filter(data_long_wt, Miasto == "Warszawa", Rok == 2020)
+waw_wo2021 <- filter(data_long_wo, Miasto == "Warszawa", Rok == 2021)
+waw_wt2021 <- filter(data_long_wt, Miasto == "Warszawa", Rok == 2021)
+
+Warszawa_2020 <- rbind(waw_wo2020,waw_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Warszawa_2020$Rodzaj <- Rodzaj
+
+
+data_Warszawa <- rbind(waw_wo2020,waw_wt2020,waw_wo2021,waw_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Warszawa$Rodzaj <- Rodzaj
+
+ 
+a <- ggplot(data = Warszawa_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+s <- ggplot(data = data_Warszawa, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity", color = "green") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(s, renderer = gifski_renderer())
+```
+
+### Wrocław
+
+```{r}
+wr_wo2020 <- filter(data_long_wo, Miasto == "Wrocław", Rok == 2020)
+wr_wt2020 <- filter(data_long_wt, Miasto == "Wrocław", Rok == 2020)
+wr_wo2021 <- filter(data_long_wo, Miasto == "Wrocław", Rok == 2021)
+wr_wt2021 <- filter(data_long_wt, Miasto == "Wrocław", Rok == 2021)
+
+Wroclaw_2020 <- rbind(wr_wo2020,wr_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+Wroclaw_2020$Rodzaj <- Rodzaj
+
+
+data_Wroclaw <- rbind(wr_wo2020,wr_wt2020,wr_wo2021,wr_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_Wroclaw$Rodzaj <- Rodzaj
+
+ 
+o<- ggplot(data = Wroclaw_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+p<- ggplot(data = data_Wroclaw, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "black") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(p, renderer = gifski_renderer())
+```
+
+
+### Zielona Góra
+
+```{r}
+zg_wo2020 <- filter(data_long_wo, Miasto == "ZielonaGóra", Rok == 2020)
+zg_wt2020 <- filter(data_long_wt, Miasto == "ZielonaGóra", Rok == 2020)
+zg_wo2021 <- filter(data_long_wo, Miasto == "ZielonaGóra", Rok == 2021)
+zg_wt2021 <- filter(data_long_wt, Miasto == "ZielonaGóra", Rok == 2021)
+
+ZielonaGora_2020 <- rbind(zg_wo2020,zg_wt2020)
+Rodzaj <- c("ofeowane","transakcyjne")
+ZielonaGora_2020$Rodzaj <- Rodzaj
+
+
+data_ZielonaGora <- rbind(zg_wo2020,zg_wt2020,zg_wo2021,zg_wt2021)  
+Rodzaj <- c("ofeowane","transakcyjne","ofeowane","transakcyjne" )
+data_ZielonaGora$Rodzaj <- Rodzaj
+
+ 
+u <- ggplot(data = ZielonaGora_2020, aes(x=Rodzaj, y = cena)) +
+  geom_bar(stat="identity")
+
+i <- ggplot(data = data_ZielonaGora, aes(x = Rodzaj, y = cena)) + 
+  geom_bar(stat="identity",color = "white") + 
+  theme_bw() +
+  transition_states(Rok) +
+  ggtitle("Przyrost ceny za m2 z 2020 do 2021 roku")+ labs(y = "Cena za m2", x = "Rodzaj ceny")
+
+animate(i, renderer = gifski_renderer())
+```
+
+
+
+
+
+
